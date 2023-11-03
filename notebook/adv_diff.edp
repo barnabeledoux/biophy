@@ -1,0 +1,37 @@
+// Define the geometry
+real rmin = 1.; // Set r_min value
+real rmax = 1.E1; // Set r_max value
+int Ndisc = 600; // Set the number of elements for discretization
+int Nrect = 50;
+border Gamma1(t=0., 2*pi){x=rmin*cos(t); y=rmin*sin(t);}
+border Gamma2(t=0., 2*pi){x=1.1*rmin*cos(t); y=1.1*rmin*sin(t);}
+border C11(t=0., 2.){x=rmax*(t-1.); y=-rmax;}
+border C12(t=0., 2.){x=rmax; y=rmax*(t-1.);}
+border C13(t=0., 2.){x=rmax*(1.-t); y=rmax;}
+border C14(t=0., 2.){x=-rmax; y=rmax*(1.-t);}
+mesh Th = buildmesh(C11(Nrect)+C12(Nrect)+C13(Nrect)+C14(Nrect)+Gamma1(-Ndisc)+Gamma2(Ndisc));
+//
+real a = 1.; // Set the value of 'a'
+real v0 = 3.E1; // Set the value of 'v0'
+real D = 1.E3; // Set the value of 'D'
+// Define the function space and test/trial functions
+fespace Vh(Th, P2);
+Vh u, v;
+Vh f1 = sqrt(x^2+y^2)*v0 * ((-1 + 3 * a / (2 * sqrt(x^2+y^2)) - a^3 / (2 * sqrt(x^2+y^2)^3))+(2 - 9 * a / (4 * sqrt(x^2+y^2)) + a^3 / (4 * sqrt(x^2+y^2)^3)) * sin(atan2(y,x))^2) / D;
+Vh f2 = - sqrt(x^2+y^2)*v0 * sin(atan2(y,x)) * cos(atan2(y,x)) * (-2 + 9 * a / (4 * sqrt(x^2+y^2)) - a^3 / (4 * sqrt(x^2+y^2)^3)) / D;
+//
+macro grad(u1) [dx(u1), dy(u1)] //
+problem Poisson(u, v)
+    =  int2d(Th)( // The bilinear part
+            dx(u)*(dx(v)+f1*v)
+            +dy(u)*(dy(v)+f2*v)
+        )
+        + on(Gamma1, u=0.)
+        + on(C11, u=1.)
+        + on(C12, u=1.)
+        + on(C13, u=1.)
+        + on(C14, u=1.)
+        ;
+Poisson;
+// Plot the solution
+plot(u, value=1, fill=1, wait=1, boundary=0, bb=([[-5.,-5.],[5.,5.]]), ps="concentration");
